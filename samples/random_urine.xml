@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 합성 데이터 (synthetic) — 실제 환자정보 아님. 데모 시나리오 1: Random Urine -->
+<LabReport>
+  <Patient>
+    <Name>홍길동</Name>
+    <ID>SYN-0001</ID>
+  </Patient>
+  <Specimen>Random Urine</Specimen>
+  <ReportedAt>2026-06-26T09:30:00+09:00</ReportedAt>
+  <TestResults>
+    <Test>
+      <Name>Specific Gravity</Name>
+      <Value>1.015</Value>
+      <Unit></Unit>
+      <ReferenceRange>1.005-1.030</ReferenceRange>
+    </Test>
+    <Test>
+      <Name>pH</Name>
+      <Value>6.0</Value>
+      <Unit></Unit>
+      <ReferenceRange>4.5-8.0</ReferenceRange>
+    </Test>
+    <Test>
+      <Name>Urine Creatinine</Name>
+      <Value>120</Value>
+      <Unit>mg/dL</Unit>
+      <ReferenceRange>20-370</ReferenceRange>
+    </Test>
+    <Test>
+      <Name>Urine Microalbumin</Name>
+      <Value>15</Value>
+      <Unit>mg/L</Unit>
+      <ReferenceRange>0-20</ReferenceRange>
+    </Test>
+    <Test>
+      <Name>Urine Glucose</Name>
+      <Value>8</Value>
+      <Unit>mg/dL</Unit>
+      <ReferenceRange>0-15</ReferenceRange>
+    </Test>
+  </TestResults>
+</LabReport>

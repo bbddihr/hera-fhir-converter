@@ -13,11 +13,11 @@ def test_package_imports():
     assert hera.__version__ == "0.0.0"
 
 
-def test_convert_is_stub():
+def test_convert_rejects_malformed_xml():
     from hera import pipeline
 
-    with pytest.raises(NotImplementedError):
-        pipeline.convert("<x/>")
+    with pytest.raises(ValueError):
+        pipeline.convert("<LabReport><unclosed>")
 
 
 def test_config_defaults():
