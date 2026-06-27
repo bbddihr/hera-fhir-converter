@@ -1,21 +1,44 @@
 """파이프라인 오케스트레이터: XML → 계약 객체.
 
 흐름:
-    XML → [Profiler] form_type 판별 → [Router] 매핑 분기
+    XML → [Profiler] cache → semantic → cache (form_type 판별)
         → [Mapper] FHIR Bundle 조립 → [Validator] R4 검증 → 계약 객체
 
-Phase 1: form_type을 'lab'으로 고정(분류기 없이 매핑·검증·출력을 먼저 검증).
-Phase 3에서 Profiler를 1차로 삽입하고 via='hardcoded'를 semantic/cache로 대체한다.
+Phase 3: Profiler를 1차로 삽입(lab 하드코딩 제거). via = cache | semantic | fallback.
+라우팅(form_type → mapper 분기)은 Phase 4. 현재는 lab 매퍼로 조립한다.
 """
 from __future__ import annotations
 
+from . import config, tasks
 from .contract import Classification, Contract, Validation
 from .mapper import lab
 from .mapper.value_parser import parse_lab_xml
+from .profiler import cache, semantic, signature
 from .validator import validate
 
-# Phase 3에서 hera.tasks로 이관 예정.
-_LAB_TASK = ("검사결과 판독/요약", "검사 의뢰의")
+
+def profile(xml: str) -> dict:
+    """form_type 판별 — cache 우선, 미적중 시 semantic, 키 없으면 fallback.
+
+    Returns:
+        {"form_type": str, "confidence": float, "via": "cache|semantic|fallback"}
+    """
+    sig = signature.signature(xml)
+
+    cached = cache.lookup(sig)
+    if cached:
+        return {**cached, "via": "cache"}
+
+    if config.api_key_present():
+        try:
+            result = semantic.classify(xml)
+            cache.write(sig, result)
+            return {**result, "via": "semantic"}
+        except Exception:  # noqa: BLE001 — 분류 실패 시 데모가 멈추지 않도록 폴백
+            pass
+
+    # 폴백: 키 없음 또는 분류 실패 → MVP 기본 도메인(lab)으로 진행.
+    return {"form_type": "lab", "confidence": 0.0, "via": "fallback"}
 
 
 def convert(xml: str) -> dict:
@@ -31,17 +54,20 @@ def convert(xml: str) -> dict:
     Raises:
         ValueError: well-formed XML이 아닐 때.
     """
-    # Phase 1: 분류 고정.
-    form_type = "lab"
-    target_task, target_role = _LAB_TASK
+    profiled = profile(xml)
+    form_type = profiled["form_type"]
+    target_task, target_role = tasks.task_for(form_type)
 
+    # Phase 4에서 router로 분기. 현재는 lab 매퍼 고정.
     parsed = parse_lab_xml(xml)
     bundle = lab.build_bundle(parsed)
     validation = validate(bundle)
 
     contract = Contract(
         form_type=form_type,
-        classification=Classification(confidence=1.0, via="hardcoded"),
+        classification=Classification(
+            confidence=profiled["confidence"], via=profiled["via"]
+        ),
         target_task=target_task,
         target_role=target_role,
         fhir_bundle=bundle,
