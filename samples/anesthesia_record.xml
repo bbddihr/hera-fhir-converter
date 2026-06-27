@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 합성 데이터 (synthetic) — 실제 환자정보 아님.
+     데모 시나리오 4: 검사가 아닌 마취기록 → 의미분류 anesthesia_record → Composition document -->
+<AnesthesiaRecord>
+  <Patient>
+    <Name>이철수</Name>
+    <ID>SYN-0003</ID>
+  </Patient>
+  <Operation>
+    <ProcedureName>복강경 담낭절제술</ProcedureName>
+    <AnesthesiaType>전신마취</AnesthesiaType>
+    <StartTime>2026-06-26T09:00:00+09:00</StartTime>
+    <EndTime>2026-06-26T10:30:00+09:00</EndTime>
+  </Operation>
+  <Vitals>
+    <Vital>
+      <Time>2026-06-26T09:00:00+09:00</Time>
+      <HeartRate>72</HeartRate>
+      <SpO2>99</SpO2>
+    </Vital>
+    <Vital>
+      <Time>2026-06-26T09:30:00+09:00</Time>
+      <HeartRate>68</HeartRate>
+      <SpO2>100</SpO2>
+    </Vital>
+    <Vital>
+      <Time>2026-06-26T10:00:00+09:00</Time>
+      <HeartRate>75</HeartRate>
+      <SpO2>98</SpO2>
+    </Vital>
+  </Vitals>
+  <Medications>
+    <Medication>
+      <Name>Propofol</Name>
+      <Dose>120</Dose>
+      <Unit>mg</Unit>
+      <Route>IV</Route>
+      <Time>2026-06-26T09:00:00+09:00</Time>
+    </Medication>
+    <Medication>
+      <Name>Rocuronium</Name>
+      <Dose>50</Dose>
+      <Unit>mg</Unit>
+      <Route>IV</Route>
+      <Time>2026-06-26T09:02:00+09:00</Time>
+    </Medication>
+  </Medications>
+</AnesthesiaRecord>

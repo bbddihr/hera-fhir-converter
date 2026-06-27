@@ -1,8 +1,18 @@
-# 서사형 룰셋 — 마취기록 Composition 섹션 매핑 (Phase 4에서 구현)
-# 본문 섹션을 의미 단위로 분할해 Composition.section에 매핑한다.
+# 서사형 룰셋 — 마취기록 Composition 섹션 매핑.
+# 본문을 의미 단위 섹션으로 분할해 Composition.section에 매핑한다.
 
 form_type: anesthesia_record
 bundle_type: document
 composition:
   title: "마취기록"
-  sections: []  # TODO(Phase 4)
+  type:
+    system: "http://loinc.org"
+    code: "11505-5"
+    display: "Anesthesia records"
+  sections:
+    - key: procedure
+      title: "마취 정보"
+    - key: vitals
+      title: "술중 활력징후"
+    - key: medications
+      title: "투여 약물"

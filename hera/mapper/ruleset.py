@@ -18,3 +18,10 @@ def load_lab_ruleset() -> dict:
     """rulesets/lab-observation.yaml 로드 (캐시)."""
     path = RULESET_DIR / "lab-observation.yaml"
     return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+
+
+@functools.lru_cache(maxsize=None)
+def load_anesthesia_ruleset() -> dict:
+    """rulesets/anesthesia-composition.yaml 로드 (캐시)."""
+    path = RULESET_DIR / "anesthesia-composition.yaml"
+    return yaml.safe_load(path.read_text(encoding="utf-8")) or {}

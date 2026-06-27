@@ -2,17 +2,16 @@
 
 흐름:
     XML → [Profiler] cache → semantic → cache (form_type 판별)
-        → [Mapper] FHIR Bundle 조립 → [Validator] R4 검증 → 계약 객체
+        → [Router] form_type 분기 → [Mapper] FHIR Bundle 조립
+        → [Validator] R4 검증 → 계약 객체
 
-Phase 3: Profiler를 1차로 삽입(lab 하드코딩 제거). via = cache | semantic | fallback.
-라우팅(form_type → mapper 분기)은 Phase 4. 현재는 lab 매퍼로 조립한다.
+Profiler가 1차(cache | semantic | fallback), Router가 검사형(collection)/서사형(document)을 분기한다.
 """
 from __future__ import annotations
 
 from . import config, tasks
 from .contract import Classification, Contract, Validation
-from .mapper import lab
-from .mapper.value_parser import parse_lab_xml
+from .mapper import router
 from .profiler import cache, semantic, signature
 from .validator import validate
 
@@ -58,9 +57,8 @@ def convert(xml: str) -> dict:
     form_type = profiled["form_type"]
     target_task, target_role = tasks.task_for(form_type)
 
-    # Phase 4에서 router로 분기. 현재는 lab 매퍼 고정.
-    parsed = parse_lab_xml(xml)
-    bundle = lab.build_bundle(parsed)
+    # form_type → 매퍼 분기 (검사형: collection / 서사형: document)
+    bundle = router.route(form_type, xml)
     validation = validate(bundle)
 
     contract = Contract(

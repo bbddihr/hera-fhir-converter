@@ -1,11 +1,11 @@
 """FHIR R4 invariant 검증 — `fhir.resources`(Pydantic) 기반.
 
-Bundle dict를 R4 모델로 검증해 {r4_valid, invariants, errors}를 반환한다.
-실패 시 errors를 채워 UI 배지/로그와 연동한다.
+Bundle dict를 R4(R4B) 모델로 검증해 {r4_valid, invariants, errors}를 반환한다.
+주의: fhir.resources 기본 import는 R5다. PRD는 R4 기준이므로 R4B 모델을 명시 사용한다.
 """
 from __future__ import annotations
 
-from fhir.resources.bundle import Bundle
+from fhir.resources.R4B.bundle import Bundle
 from pydantic import ValidationError
 
 
