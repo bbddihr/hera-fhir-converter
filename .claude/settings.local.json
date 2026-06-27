@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(python -m venv .venv)",
+      "PowerShell(.\\\\.venv\\\\Scripts\\\\python.exe -m pip install --upgrade pip -q)",
+      "PowerShell(.\\\\.venv\\\\Scripts\\\\python.exe -m pip install -r requirements.txt -q)",
+      "PowerShell(.\\\\.venv\\\\Scripts\\\\python.exe -c \"import streamlit, fhir.resources, lxml, yaml, anthropic, dotenv, pytest; print\\('all imports OK'\\)\")",
+      "PowerShell(.\\\\.venv\\\\Scripts\\\\python.exe -m pytest -q 2>&1)",
+      "PowerShell($p = Start-Process -FilePath \".\\\\.venv\\\\Scripts\\\\python.exe\" -ArgumentList \"-m\",\"streamlit\",\"run\",\"app.py\",\"--server.headless=true\",\"--server.port=8765\",\"--browser.gatherUsageStats=false\" -PassThru -RedirectStandardOutput \"$env:TEMP\\\\hera_st.log\" -RedirectStandardError \"$env:TEMP\\\\hera_st.err\"; Start-Sleep -Seconds 12; try { $r = Invoke-WebRequest \"http://localhost:8765/_stcore/health\" -UseBasicParsing -TimeoutSec 5; Write-Output \"HEALTH: $\\($r.StatusCode\\) $\\($r.Content\\)\" } catch { Write-Output \"HEALTH ERR: $_\" }; Write-Output \"---stderr tail---\"; Get-Content \"$env:TEMP\\\\hera_st.err\" -Tail 8 -ErrorAction SilentlyContinue; Stop-Process -Id $p.Id -Force; Write-Output \"\\(server stopped\\)\")"
+    ]
+  }
+}

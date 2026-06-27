@@ -1,0 +1,17 @@
+# 검사형 룰셋 — 항목 매핑 (Phase 2에서 외부화)
+# 임상 전문가가 코드 없이 수정하는 매핑 정의. MVP는 데모 등장 항목만.
+#
+# 최소 형상 예:
+# form_type: lab
+# resource: Observation
+# category: laboratory
+# items:
+#   - source_field: "혈색소"
+#     code: { system: local, code: "HGB" }   # MVP는 local 코드, LOINC는 로드맵
+#     unit: "g/dL"                            # UCUM 매핑 대상
+#     value_kind: quantity                    # quantity | range | qualitative
+
+form_type: lab
+resource: Observation
+category: laboratory
+items: []  # TODO(Phase 2)
