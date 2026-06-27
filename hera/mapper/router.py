@@ -1,21 +1,24 @@
-"""Router — form_type을 적절한 mapper로 디스패치한다.
+"""Router — doc_kind를 적절한 조립기(mapper 모듈)로 디스패치한다.
 
-    검사형 (lab / unknown / fallback) → mapper.lab        (collection)
-    서사형 (anesthesia/외래/응급)      → mapper.narrative  (document)
+각 조립기 모듈은 동일 인터페이스를 노출한다:
+    assemble(xml) -> {bundle, mapping, coverage}
+    PRIMARY_RESOURCE / PRIMARY_NOTE / BUNDLE_TYPE / COMPANION_RESOURCES / ALTERNATIVE_RESOURCES
 
-새 서식 추가 = 라우팅 룰 추가.
+새 서식 추가 = 새 조립기 모듈 + 레지스트리 한 줄.
 """
 from __future__ import annotations
 
-from . import lab, narrative
-from .value_parser import parse_lab_xml
+from types import ModuleType
 
-NARRATIVE_FORMS = {"anesthesia_record", "outpatient_first", "emergency_record"}
+from . import consult, lab, narrative
+
+REGISTRY: dict[str, ModuleType] = {
+    "consult": consult,
+    "lab": lab,
+    "anesthesia": narrative,
+}
 
 
-def route(form_type: str, xml: str) -> dict:
-    """form_type에 따라 FHIR Bundle(dict)을 조립한다."""
-    if form_type in NARRATIVE_FORMS:
-        return narrative.build_bundle(xml, form_type)
-    # 검사형 기본 경로 (lab / unknown / fallback)
-    return lab.build_bundle(parse_lab_xml(xml))
+def get_assembler(doc_kind: str) -> ModuleType:
+    """doc_kind → 조립기 모듈. 미지/미등록은 lab(검사형)으로 폴백."""
+    return REGISTRY.get(doc_kind, lab)

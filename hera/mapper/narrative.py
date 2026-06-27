@@ -17,6 +17,18 @@ from .value_parser import UCUM_SYSTEM, simple_quantity
 _NS = uuid.UUID("12345678-1234-5678-1234-567812345678")
 LOINC_SYSTEM = "http://loinc.org"
 
+# 분석 카드(②)용 메타
+PRIMARY_RESOURCE = "Composition"
+PRIMARY_NOTE = "마취기록을 섹션 구조의 임상 문서로 표현 (document)"
+BUNDLE_TYPE = "document"
+COMPANION_RESOURCES = [
+    {"resource": "Procedure", "role": "마취"},
+    {"resource": "Observation", "role": "술중 활력징후"},
+    {"resource": "MedicationAdministration", "role": "투여 약물"},
+    {"resource": "Patient", "role": "환자"},
+]
+ALTERNATIVE_RESOURCES: list[dict] = []
+
 # 활력징후 → (LOINC, UCUM 단위)
 _VITALS = {
     "HeartRate": {"display": "Heart rate", "loinc": "8867-4", "unit": "/min"},
@@ -230,6 +242,31 @@ def build_bundle(xml: str, form_type: str = "anesthesia_record") -> dict:
         "timestamp": composition["date"],
         "entry": entries,
     }
+
+
+def assemble(xml: str) -> dict:
+    """마취기록 XML → {bundle, mapping, coverage}."""
+    parsed = parse_anesthesia_xml(xml)
+    bundle = build_bundle(xml)
+
+    rows = []
+    op = parsed["operation"]
+    if op.get("anesthesia_type"):
+        rows.append({"xml_item": "AnesthesiaType", "raw_value": op["anesthesia_type"],
+                     "fhir_target": "Procedure.code", "resource_group": "Procedure", "status": "mapped"})
+    for v in parsed["vitals"]:
+        for key in ("HeartRate", "SpO2"):
+            if v.get(key) is not None:
+                rows.append({"xml_item": key, "raw_value": v[key],
+                             "fhir_target": "Observation.valueQuantity", "resource_group": "Observation", "status": "mapped"})
+    for m in parsed["medications"]:
+        if m.get("name"):
+            rows.append({"xml_item": f"약물: {m['name']}", "raw_value": f'{m.get("dose","")}{m.get("unit","")}',
+                         "fhir_target": "MedicationAdministration", "resource_group": "MedicationAdministration", "status": "mapped"})
+    if parsed["patient"].get("name"):
+        rows.append({"xml_item": "Patient", "raw_value": parsed["patient"]["name"],
+                     "fhir_target": "Patient.name", "resource_group": "Patient", "status": "mapped"})
+    return {"bundle": bundle, "mapping": rows, "coverage": {"total": len(rows), "mapped": len(rows)}}
 
 
 def _composition_type(comp_rules: dict) -> dict:

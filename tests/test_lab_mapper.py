@@ -42,8 +42,8 @@ def test_bundle_is_r4_valid():
 
 
 def test_pipeline_end_to_end():
-    contract = pipeline.convert(SAMPLE.read_text(encoding="utf-8"))
-    assert contract["form_type"] == "lab"
-    assert contract["target_role"] == "검사 의뢰의"
-    assert contract["validation"]["r4_valid"] is True
-    assert contract["fhir_bundle"]["type"] == "collection"
+    result = pipeline.convert(SAMPLE.read_text(encoding="utf-8"))
+    assert result["analysis"]["doc_kind"] == "lab"
+    assert result["validation"]["r4_valid"] is True
+    assert result["fhir_bundle"]["type"] == "collection"
+    assert "target_role" not in result  # TASK 계약 제거 확인

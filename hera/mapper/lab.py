@@ -21,6 +21,13 @@ from .value_parser import (
 _NS = uuid.UUID("12345678-1234-5678-1234-567812345678")
 LOINC_SYSTEM = "http://loinc.org"
 
+# 분석 카드(②)용 메타
+PRIMARY_RESOURCE = "DiagnosticReport"
+PRIMARY_NOTE = "검사 결과를 Observation으로, DiagnosticReport로 그룹화 (collection)"
+BUNDLE_TYPE = "collection"
+COMPANION_RESOURCES = [{"resource": "Observation", "role": "검사 항목"}]
+ALTERNATIVE_RESOURCES: list[dict] = []
+
 OBS_CATEGORY = {
     "coding": [
         {
@@ -119,6 +126,36 @@ def build_bundle(parsed: dict) -> dict:
     ]
 
     return {"resourceType": "Bundle", "type": "collection", "entry": entries}
+
+
+def assemble(xml: str) -> dict:
+    """검사형 XML → {bundle, mapping, coverage}."""
+    from .value_parser import parse_lab_xml
+
+    parsed = parse_lab_xml(xml)
+    bundle = build_bundle(parsed)
+
+    rows = []
+    for item in parsed.get("items", []):
+        rows.append(
+            {
+                "xml_item": item["name"],
+                "raw_value": item.get("raw_value", ""),
+                "fhir_target": "Observation.value[x] (+ interpretation)",
+                "resource_group": "Observation",
+                "status": "mapped",
+            }
+        )
+    rows.append(
+        {
+            "xml_item": parsed.get("specimen", "Panel"),
+            "raw_value": f'{len(parsed.get("items", []))} 항목',
+            "fhir_target": "DiagnosticReport (그룹화)",
+            "resource_group": "DiagnosticReport",
+            "status": "mapped",
+        }
+    )
+    return {"bundle": bundle, "mapping": rows, "coverage": {"total": len(rows), "mapped": len(rows)}}
 
 
 def interpretation_summary(bundle: dict) -> tuple[int, int]:

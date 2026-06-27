@@ -108,6 +108,6 @@ def test_cbc_loinc_activated_from_ruleset():
 
 
 def test_cbc_pipeline_r4_valid():
-    contract = pipeline.convert(SAMPLE.read_text(encoding="utf-8"))
-    assert contract["form_type"] == "lab"
-    assert contract["validation"]["r4_valid"] is True
+    result = pipeline.convert(SAMPLE.read_text(encoding="utf-8"))
+    assert result["analysis"]["doc_kind"] == "lab"
+    assert result["validation"]["r4_valid"] is True

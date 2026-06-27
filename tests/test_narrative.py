@@ -56,11 +56,11 @@ def test_document_bundle_is_r4_valid():
     assert result["r4_valid"] is True, result["errors"]
 
 
-def test_router_dispatches_by_form_type():
+def test_router_dispatches_by_doc_kind():
     # 서사형 → document, 검사형 → collection
-    assert router.route("anesthesia_record", _xml())["type"] == "document"
+    anes = router.get_assembler("anesthesia").assemble(_xml())
+    assert anes["bundle"]["type"] == "document"
 
-    lab_xml = (
-        SAMPLE.parent / "random_urine.xml"
-    ).read_text(encoding="utf-8")
-    assert router.route("lab", lab_xml)["type"] == "collection"
+    lab_xml = (SAMPLE.parent / "random_urine.xml").read_text(encoding="utf-8")
+    lab_built = router.get_assembler("lab").assemble(lab_xml)
+    assert lab_built["bundle"]["type"] == "collection"

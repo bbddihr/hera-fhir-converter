@@ -1,4 +1,4 @@
-"""Phase 0 스모크 테스트 — 패키지가 import 가능하고 스켈레톤이 살아있는지 확인."""
+"""스모크 테스트 — 패키지 import + 기본 동작."""
 from __future__ import annotations
 
 import pytest
@@ -6,9 +6,16 @@ import pytest
 
 def test_package_imports():
     import hera
-    from hera import config, contract, pipeline, tasks, validator  # noqa: F401
-    from hera.mapper import lab, narrative, router, value_parser  # noqa: F401
-    from hera.profiler import cache, semantic, signature  # noqa: F401
+    from hera import config, contract, pipeline, validator  # noqa: F401
+    from hera.mapper import (  # noqa: F401
+        consult,
+        general_record,
+        lab,
+        narrative,
+        router,
+        value_parser,
+    )
+    from hera.profiler import analysis, cache, signature  # noqa: F401
 
     assert hera.__version__ == "0.0.0"
 

@@ -1,17 +1,16 @@
-"""Phase 3 — signature/cache/profile (실제 API 호출 없이 monkeypatch)."""
+"""Profiler — signature/cache/analyze (실제 API 호출 없이 monkeypatch)."""
 from __future__ import annotations
 
 import pytest
 
 from hera import config, pipeline
-from hera.profiler import cache, signature
-from hera.profiler import semantic
+from hera.profiler import analysis, cache, signature
 
-XML_A = "<LabReport><Specimen>Urine</Specimen><Test><Name>pH</Name><Value>6.0</Value></Test></LabReport>"
+XML_A = "<LabReport><Specimen>Urine</Specimen><Test><Name>pH</Name><Value>6.0</Value><ReferenceRange>4.5-8.0</ReferenceRange></Test></LabReport>"
 # 같은 구조, 값만 다름
-XML_A2 = "<LabReport><Specimen>Blood</Specimen><Test><Name>WBC</Name><Value>12.5</Value></Test></LabReport>"
+XML_A2 = "<LabReport><Specimen>Blood</Specimen><Test><Name>WBC</Name><Value>12.5</Value><ReferenceRange>4-10</ReferenceRange></Test></LabReport>"
 # 다른 구조
-XML_B = "<AnesthesiaRecord><Procedure>전신마취</Procedure></AnesthesiaRecord>"
+XML_B = "<AnesthesiaRecord><Vital><HeartRate>72</HeartRate></Vital></AnesthesiaRecord>"
 
 
 def test_signature_ignores_values():
@@ -30,56 +29,41 @@ def test_signature_rejects_malformed():
 def test_cache_roundtrip(tmp_path, monkeypatch):
     monkeypatch.setattr(cache, "CACHE_PATH", tmp_path / "c.json")
     assert cache.lookup("sig1") is None
-    cache.write("sig1", {"form_type": "lab", "confidence": 0.9})
-    assert cache.lookup("sig1") == {"form_type": "lab", "confidence": 0.9}
+    cache.write("sig1", {"doc_kind": "lab"})
+    assert cache.lookup("sig1") == {"doc_kind": "lab"}
 
 
-def test_profile_cache_hit_skips_llm(tmp_path, monkeypatch):
+def test_analyze_cache_hit_skips_llm(tmp_path, monkeypatch):
     monkeypatch.setattr(cache, "CACHE_PATH", tmp_path / "c.json")
     sig = signature.signature(XML_A)
-    cache.write(sig, {"form_type": "lab", "confidence": 0.88})
+    cache.write(sig, {"doc_kind": "lab", "document_label": "진단검사기록", "confidence": 0.88, "rationale": []})
 
-    # semantic이 호출되면 실패 — cache hit이면 호출 안 됨
     def _boom(_xml):
         raise AssertionError("cache hit인데 LLM이 호출됨")
 
-    monkeypatch.setattr(semantic, "classify", _boom)
+    monkeypatch.setattr(analysis, "analyze", _boom)
+    result = pipeline.analyze(XML_A)
+    assert result["via"] == "cache"
+    assert result["doc_kind"] == "lab"
 
-    result = pipeline.profile(XML_A)
-    assert result == {"form_type": "lab", "confidence": 0.88, "via": "cache"}
 
-
-def test_profile_semantic_then_writes_cache(tmp_path, monkeypatch):
+def test_analyze_semantic_then_writes_cache(tmp_path, monkeypatch):
     monkeypatch.setattr(cache, "CACHE_PATH", tmp_path / "c.json")
     monkeypatch.setattr(config, "api_key_present", lambda: True)
     monkeypatch.setattr(
-        semantic, "classify", lambda _xml: {"form_type": "anesthesia_record", "confidence": 0.95}
+        analysis,
+        "analyze",
+        lambda _xml: {"doc_kind": "consult", "document_label": "협의진료의뢰서", "confidence": 0.96, "rationale": ["의뢰사유"]},
     )
-
-    result = pipeline.profile(XML_B)
-    assert result["form_type"] == "anesthesia_record"
+    result = pipeline.analyze(XML_B)
+    assert result["doc_kind"] == "consult"
     assert result["via"] == "semantic"
-    # 캐시에 적재되어 다음엔 cache hit
-    assert cache.lookup(signature.signature(XML_B)) == {
-        "form_type": "anesthesia_record",
-        "confidence": 0.95,
-    }
+    assert cache.lookup(signature.signature(XML_B))["doc_kind"] == "consult"
 
 
-def test_profile_fallback_without_key(tmp_path, monkeypatch):
+def test_analyze_fallback_without_key_uses_heuristic(tmp_path, monkeypatch):
     monkeypatch.setattr(cache, "CACHE_PATH", tmp_path / "c.json")
     monkeypatch.setattr(config, "api_key_present", lambda: False)
-    result = pipeline.profile(XML_A)
-    assert result == {"form_type": "lab", "confidence": 0.0, "via": "fallback"}
-
-
-def test_profile_semantic_failure_falls_back(tmp_path, monkeypatch):
-    monkeypatch.setattr(cache, "CACHE_PATH", tmp_path / "c.json")
-    monkeypatch.setattr(config, "api_key_present", lambda: True)
-
-    def _fail(_xml):
-        raise RuntimeError("API 오류")
-
-    monkeypatch.setattr(semantic, "classify", _fail)
-    result = pipeline.profile(XML_A)
+    result = pipeline.analyze(XML_A)
     assert result["via"] == "fallback"
+    assert result["doc_kind"] == "lab"  # 구조 기반 폴백
