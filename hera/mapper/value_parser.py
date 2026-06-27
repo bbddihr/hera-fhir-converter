@@ -1,13 +1,30 @@
-"""결과값/참고치/단위 파싱 + value[x] 분기 (검사형의 핵심 로직).
+"""결과값/참고치/단위 파싱 + value[x] 분기 + interpretation (검사형 핵심 로직).
 
-Phase 1: 원본 XML → 검체명 + 검사 항목 리스트 파싱, 단일 숫자 → valueQuantity.
-Phase 2(예정): valueRange / 정성 분기, 참고치 비교 → interpretation(H/L/N), UCUM 매핑.
+- 결과값 형태 분기: 단일 숫자 → valueQuantity / 범위(a~b) → valueRange / 정성 → valueCodeableConcept
+- 참고치 파싱: 양방향(a-b)·단방향(>,<,≥,≤)·정성·결측
+- 결과값↔참고치 비교 → interpretation H/L/N/A (HL7 v3 ObservationInterpretation)
+- UCUM 단위 정규화(ucum_aliases)
 """
 from __future__ import annotations
+
+import re
 
 from lxml import etree
 
 UCUM_SYSTEM = "http://unitsofmeasure.org"
+INTERP_SYSTEM = "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation"
+_INTERP_DISPLAY = {"H": "High", "L": "Low", "N": "Normal", "A": "Abnormal"}
+
+_RANGE_RE = re.compile(r"^\s*([\d.]+)\s*[-~]\s*([\d.]+)\s*$")
+_BOUND_RE = re.compile(r"^\s*(<=|>=|<|>|≤|≥)\s*([\d.]+)\s*$")
+
+# 정성 결과 동의어 정규화
+_QUAL_SYNONYMS = {
+    "음성": "negative", "negative": "negative", "neg": "negative",
+    "non-reactive": "negative", "nonreactive": "negative",
+    "양성": "positive", "positive": "positive", "pos": "positive",
+    "reactive": "positive",
+}
 
 
 def parse_lab_xml(xml: str) -> dict:
@@ -49,15 +66,90 @@ def to_float(s: str | None) -> float | None:
         return None
 
 
-def value_field(raw_value: str, unit: str | None) -> dict:
-    """결과값 → FHIR value[x] 필드.
+def simple_quantity(value: float, unit: str | None, ucum_aliases: dict | None = None) -> dict:
+    """FHIR SimpleQuantity dict — UCUM code는 ucum_aliases로 정규화."""
+    q: dict = {"value": value}
+    if unit:
+        code = (ucum_aliases or {}).get(unit, unit)
+        q.update({"unit": unit, "system": UCUM_SYSTEM, "code": code})
+    return q
 
-    Phase 1: 단일 숫자 → valueQuantity, 그 외 → valueString(폴백, Phase 2에서 정식 분기).
-    """
+
+def value_field(raw_value: str, unit: str | None, ucum_aliases: dict | None = None) -> dict:
+    """결과값 → FHIR value[x] 필드 (자동 분기)."""
     num = to_float(raw_value)
     if num is not None:
-        quantity: dict = {"value": num}
-        if unit:
-            quantity.update({"unit": unit, "system": UCUM_SYSTEM, "code": unit})
-        return {"valueQuantity": quantity}
-    return {"valueString": raw_value}
+        return {"valueQuantity": simple_quantity(num, unit, ucum_aliases)}
+
+    m = _RANGE_RE.match(raw_value or "")
+    if m:
+        low = simple_quantity(float(m.group(1)), unit, ucum_aliases)
+        high = simple_quantity(float(m.group(2)), unit, ucum_aliases)
+        return {"valueRange": {"low": low, "high": high}}
+
+    if raw_value:
+        return {"valueCodeableConcept": {"text": raw_value}}
+    return {"valueString": ""}
+
+
+def parse_reference_range(ref: str | None) -> dict | None:
+    """참고치 문자열 → 구조화. 결측/해석불가 시 None."""
+    if not ref:
+        return None
+    m = _RANGE_RE.match(ref)
+    if m:
+        return {"kind": "range", "low": float(m.group(1)), "high": float(m.group(2))}
+    m = _BOUND_RE.match(ref)
+    if m:
+        op = m.group(1).replace("≤", "<=").replace("≥", ">=")
+        val = float(m.group(2))
+        if op in (">", ">="):  # 정상 범위가 경계 위
+            return {"kind": "low_bound", "op": op, "value": val}
+        return {"kind": "high_bound", "op": op, "value": val}  # 정상 범위가 경계 아래
+    return {"kind": "qualitative", "expected": ref.strip()}
+
+
+def _norm_qual(s: str) -> str:
+    key = s.strip().lower()
+    return _QUAL_SYNONYMS.get(key, key)
+
+
+def interpret(raw_value: str, parsed_ref: dict | None) -> str | None:
+    """결과값↔참고치 비교 → interpretation 코드(H/L/N/A) 또는 None."""
+    if not parsed_ref:
+        return None
+    kind = parsed_ref["kind"]
+
+    if kind == "qualitative":
+        if not raw_value:
+            return None
+        return "N" if _norm_qual(raw_value) == _norm_qual(parsed_ref["expected"]) else "A"
+
+    num = to_float(raw_value)
+    if num is None:
+        return None
+
+    if kind == "range":
+        if num < parsed_ref["low"]:
+            return "L"
+        if num > parsed_ref["high"]:
+            return "H"
+        return "N"
+    if kind == "low_bound":  # 정상 = 경계 초과(이상)
+        ok = num >= parsed_ref["value"] if parsed_ref["op"] == ">=" else num > parsed_ref["value"]
+        return "N" if ok else "L"
+    if kind == "high_bound":  # 정상 = 경계 미만(이하)
+        ok = num <= parsed_ref["value"] if parsed_ref["op"] == "<=" else num < parsed_ref["value"]
+        return "N" if ok else "H"
+    return None
+
+
+def interpretation_cc(code: str | None) -> dict | None:
+    """interpretation 코드 → FHIR CodeableConcept(HL7 v3)."""
+    if not code:
+        return None
+    return {
+        "coding": [
+            {"system": INTERP_SYSTEM, "code": code, "display": _INTERP_DISPLAY[code]}
+        ]
+    }

@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 합성 데이터 (synthetic) — 실제 환자정보 아님.
+     데모 시나리오 2(정량+정성 혼합) · 3(임상 판독): 12개 항목 중 비정상 3건 -->
+<LabReport>
+  <Patient>
+    <Name>김영희</Name>
+    <ID>SYN-0002</ID>
+  </Patient>
+  <Specimen>Blood</Specimen>
+  <ReportedAt>2026-06-26T10:15:00+09:00</ReportedAt>
+  <TestResults>
+    <!-- CBC -->
+    <Test>
+      <Name>WBC</Name>
+      <Value>12.5</Value>
+      <Unit>10^3/uL</Unit>
+      <ReferenceRange>4.0-10.0</ReferenceRange>
+    </Test>
+    <Test>
+      <Name>RBC</Name>
+      <Value>4.8</Value>
+      <Unit>10^6/uL</Unit>
+      <ReferenceRange>4.2-5.4</ReferenceRange>
+    </Test>
+    <Test>
+      <Name>Hemoglobin</Name>
+      <Value>14.2</Value>
+      <Unit>g/dL</Unit>
+      <ReferenceRange>13.0-17.0</ReferenceRange>
+    </Test>
+    <Test>
+      <Name>Hematocrit</Name>
+      <Value>42</Value>
+      <Unit>%</Unit>
+      <ReferenceRange>39-50</ReferenceRange>
+    </Test>
+    <Test>
+      <Name>Platelet</Name>
+      <Value>95</Value>
+      <Unit>10^3/uL</Unit>
+      <ReferenceRange>150-400</ReferenceRange>
+    </Test>
+    <Test>
+      <Name>MCV</Name>
+      <Value>88</Value>
+      <Unit>fL</Unit>
+      <ReferenceRange>80-100</ReferenceRange>
+    </Test>
+    <!-- Chemistry -->
+    <Test>
+      <Name>Glucose</Name>
+      <Value>140</Value>
+      <Unit>mg/dL</Unit>
+      <ReferenceRange>70-110</ReferenceRange>
+    </Test>
+    <Test>
+      <Name>BUN</Name>
+      <Value>15</Value>
+      <Unit>mg/dL</Unit>
+      <ReferenceRange>8-20</ReferenceRange>
+    </Test>
+    <Test>
+      <Name>Creatinine</Name>
+      <Value>0.9</Value>
+      <Unit>mg/dL</Unit>
+      <ReferenceRange>0.6-1.2</ReferenceRange>
+    </Test>
+    <Test>
+      <Name>Sodium</Name>
+      <Value>140</Value>
+      <Unit>mmol/L</Unit>
+      <ReferenceRange>135-145</ReferenceRange>
+    </Test>
+    <Test>
+      <Name>AST</Name>
+      <Value>28</Value>
+      <Unit>U/L</Unit>
+      <ReferenceRange>&lt;40</ReferenceRange>
+    </Test>
+    <!-- 정성 (qualitative) -->
+    <Test>
+      <Name>HBsAg</Name>
+      <Value>Negative</Value>
+      <Unit></Unit>
+      <ReferenceRange>Negative</ReferenceRange>
+    </Test>
+  </TestResults>
+</LabReport>

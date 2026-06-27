@@ -30,9 +30,9 @@ def test_value_field_numeric_no_unit():
     assert field["valueQuantity"] == {"value": 6.0}
 
 
-def test_value_field_non_numeric_falls_back_to_string():
+def test_value_field_qualitative_uses_codeable_concept():
     field = value_field("Negative", None)
-    assert field == {"valueString": "Negative"}
+    assert field == {"valueCodeableConcept": {"text": "Negative"}}
 
 
 def test_malformed_xml_raises():

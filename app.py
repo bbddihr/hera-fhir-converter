@@ -11,6 +11,7 @@ from pathlib import Path
 import streamlit as st
 
 from hera import config, pipeline
+from hera.mapper.lab import interpretation_summary
 
 SAMPLES = Path(__file__).resolve().parent / "samples"
 
@@ -95,8 +96,11 @@ if run:
                 f"(via {cls['via']}, conf {cls['confidence']})",
                 f"target_task={result['target_task']} / role={result['target_role']}",
                 f"resources: {_resource_summary(result['fhir_bundle'])}",
-                f"R4 검증: {val['invariants']}",
             ]
+            normal, abnormal = interpretation_summary(result["fhir_bundle"])
+            if normal or abnormal:
+                logs.append(f"interpretation: 정상 {normal} / 비정상 {abnormal}")
+            logs.append(f"R4 검증: {val['invariants']}")
             if val["errors"]:
                 logs += [f"  ! {e}" for e in val["errors"]]
             log_box.code("\n".join(logs), language="text")
