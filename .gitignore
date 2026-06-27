@@ -31,6 +31,9 @@ hera/profiler/.signature_cache.json
 # Vercel
 .vercel/
 
+# Claude Code local settings
+.claude/settings.local.json
+
 # IDE / OS
 .vscode/
 .idea/
